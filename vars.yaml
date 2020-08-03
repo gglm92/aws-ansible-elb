@@ -1,6 +1,7 @@
 ---
-aws_access_key: 
-aws_secret_key: 
+aws_access_key:
+aws_secret_key:
+key_name:
 region: us-east-1
 vpc:
   name: example1
@@ -8,8 +9,8 @@ vpc:
 igw:
   name: igw_example1
 subnet1:
-    name: subnet-{{ region }}-1a
-    cidr: 12.0.1.0/24
+  name: subnet-{{ region }}-1a
+  cidr: 12.0.1.0/24
 subnet2:
   name: subnet-{{ region }}-1b
   cidr: 12.0.2.0/24
@@ -18,4 +19,10 @@ route_table:
 security_group:
   name: sg_example1
   description: Security Group to allow ssh and http
-  
+ec2:
+  subnet_1:
+    image: ami-09d8b5222f2b93bf0
+    instance_type: t2.micro
+  subnet_2:
+    image: ami-09d8b5222f2b93bf0
+    instance_type: t2.micro

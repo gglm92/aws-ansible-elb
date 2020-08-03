@@ -3,7 +3,7 @@
   gather_facts: false
   vars_files:
     - vars.yaml
-  
+
   tasks:
   - name: Create VPC in region {{ region }}
     ec2_vpc_net:
@@ -14,7 +14,7 @@
       region: "{{ region }}"
       tenancy: default
     register: __vpc_info
-  
+
   - name: Create internet gateway
     ec2_vpc_igw:
       vpc_id: "{{ __vpc_info.vpc.id }}"
@@ -56,13 +56,13 @@
       aws_secret_key: "{{ aws_secret_key }}"
       region: "{{ region }}"
       filters:
-        vpc-id: "{{ __vpc_info.vpc.id}}"
+        vpc-id: "{{ __vpc_info.vpc.id }}"
     register: __route_table_info
 
-  - name: Set up public subnet route table "{{ __route_table_info.route_tables[0].id}}"
+  - name: Set up public subnet route table "{{ __route_table_info.route_tables[0].id }}"
     ec2_vpc_route_table:
-      route_table_id: "{{ __route_table_info.route_tables[0].id}}"
-      vpc_id: "{{ __vpc_info.vpc.id}}"
+      route_table_id: "{{ __route_table_info.route_tables[0].id }}"
+      vpc_id: "{{ __vpc_info.vpc.id }}"
       aws_access_key: "{{ aws_access_key }}"
       aws_secret_key: "{{ aws_secret_key }}"
       region: "{{ region }}"
@@ -73,14 +73,14 @@
           gateway_id: "{{ __igw_info.gateway_id }}"
     register: __route_table_info
 
-  - name: Create security group {{ security_group.name }} 
+  - name: Create security group {{ security_group.name }}
     ec2_group:
       name: "{{ security_group.name }}"
       description: "{{ security_group.description }}"
       region: "{{ region }}"
       aws_access_key: "{{ aws_access_key }}"
       aws_secret_key: "{{ aws_secret_key }}"
-      vpc_id: "{{ __vpc_info.vpc.id}}"
+      vpc_id: "{{ __vpc_info.vpc.id }}"
       rules:
         - proto: tcp
           ports:
@@ -95,3 +95,77 @@
       tags:
         Name: "{{ security_group.name }}"
     register: __security_group
+
+  - name: Get ec2-{{ subnet1.name }} machine info
+    ec2_instance_info:
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      region: "{{ region }}"
+      filters:
+        "tag:Name": ec2-{{ subnet1.name }}
+        instance-state-name: ['running','stopped']
+    register: __ec2_subnet1_info
+
+  - name:  Get ec2-{{ subnet2.name }} machine info
+    ec2_instance_info:
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      region: "{{ region }}"
+      filters:
+        "tag:Name": ec2-{{ subnet2.name }}
+        instance-state-name: ['running','stopped']
+    register: __ec2_subnet2_info
+
+  - name: Deploy ec2 machine on {{ subnet1.name }}
+    ec2:
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      region: "{{ region }}"
+      key_name: "{{ key_name }}"
+      group_id: "{{ __security_group.group_id }}"
+      image: "{{ ec2.subnet_1.image }}"
+      instance_type: "{{ ec2.subnet_1.instance_type }}"
+      wait: true
+      instance_tags:
+        type: ec2instance
+        Name: ec2-{{ subnet1.name }}
+      vpc_subnet_id: "{{ __subnet1_info.subnet.id }}"
+      assign_public_ip: yes
+    register: __ec2_subnet1
+    when: __ec2_subnet1_info.instances | length == 0
+
+  - name: Deploy ec2 machine on {{ subnet2.name }}
+    ec2:
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      region: "{{ region }}"
+      key_name: "{{ key_name }}"
+      group_id: "{{ __security_group.group_id }}"
+      image: "{{ ec2.subnet_2.image }}"
+      instance_type: "{{ ec2.subnet_2.instance_type }}"
+      wait: true
+      instance_tags:
+        type: ec2instance
+        Name: ec2-{{ subnet2.name }}
+      vpc_subnet_id: "{{ __subnet2_info.subnet.id }}"
+      assign_public_ip: yes
+    register: __ec2_subnet2
+    when: __ec2_subnet2_info.instances | length == 0
+
+  - name: Wait for SSH to come up ec2-{{ subnet1.name }}
+    wait_for:
+      host: "{{ item.public_dns_name }}"
+      port: 22
+      delay: 30
+      timeout: 185
+    with_items: "{{ __ec2_subnet1.instances }}"
+    when: "__ec2_subnet1.instances is defined"
+
+  - name: Wait for SSH to come up ec2-{{ subnet2.name }}
+    wait_for:
+      host: "{{ item.public_dns_name }}"
+      port: 22
+      delay: 30
+      timeout: 185
+    with_items: "{{ __ec2_subnet2.instances }}"
+    when: "__ec2_subnet2.instances is defined"

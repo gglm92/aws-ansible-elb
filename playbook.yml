@@ -68,8 +68,7 @@
       aws_access_key: "{{ aws_access_key }}"
       aws_secret_key: "{{ aws_secret_key }}"
       region: "{{ region }}"
-      tags:
-        Name: "{{ route_table.name }}"
+      lookup: id
       routes:
         - dest: 0.0.0.0/0
           gateway_id: "{{ __igw_info.gateway_id }}"

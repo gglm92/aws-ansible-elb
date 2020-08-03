@@ -5,7 +5,7 @@
     - vars.yaml
 
   tasks:
-  - name: Create VPC in region {{ region }}
+  - name: Create VPC "{{ vpc.name }}" in region {{ region }}
     ec2_vpc_net:
       name: "{{ vpc.name }}"
       cidr_block: "{{ vpc.cidr_block }}"
@@ -15,7 +15,7 @@
       tenancy: default
     register: __vpc_info
 
-  - name: Create internet gateway
+  - name: Create internet gateway "{{ igw.name }}"
     ec2_vpc_igw:
       vpc_id: "{{ __vpc_info.vpc.id }}"
       aws_access_key: "{{ aws_access_key }}"
@@ -34,6 +34,7 @@
       aws_secret_key: "{{ aws_secret_key }}"
       region: "{{ region }}"
       cidr: "{{ subnet1.cidr }}"
+      az: "{{ subnet1.az }}"
       tags:
         Name: "{{ subnet1.name }}"
     register: __subnet1_info
@@ -46,6 +47,7 @@
       aws_secret_key: "{{ aws_secret_key }}"
       region: "{{ region }}"
       cidr: "{{ subnet2.cidr }}"
+      az: "{{ subnet2.az }}"
       tags:
         Name: "{{ subnet2.name }}"
     register: __subnet2_info
@@ -169,3 +171,58 @@
       timeout: 185
     with_items: "{{ __ec2_subnet2.instances }}"
     when: "__ec2_subnet2.instances is defined"
+
+  - name:  Get ec2 machines info
+    ec2_instance_info:
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      region: "{{ region }}"
+      filters:
+        "tag:Name":
+          - ec2-{{ subnet2.name }}
+          - ec2-{{ subnet1.name }}
+        instance-state-name: ['running','stopped']
+    register: __ec2_machines_info
+
+  - name: Create target group {{ target_group.name }}
+    elb_target_group:
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      region: "{{ region }}"
+      name: "{{ target_group.name }}"
+      protocol: "{{ target_group.protocol }}"
+      port: "{{ target_group.port }}"
+      vpc_id: "{{ __vpc_info.vpc.id }}"
+      state: "{{ target_group.state }}"
+    register: __target_group
+
+  - name: Add targets to target group {{ __target_group.target_group_name }}
+    elb_target:
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      region: "{{ region }}"
+      target_group_name: "{{ __target_group.target_group_name }}"
+      target_id: "{{ item.instance_id }}"
+      state: "{{ target_group.state }}"
+    with_items: "{{ __ec2_machines_info.instances }}"
+
+  - name: Create load balancer
+    elb_application_lb:
+      name: "{{ elb.name }}"
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      region: "{{ region }}"
+      state: "{{ elb.state }}"
+      wait: true
+      security_groups:
+        - "{{ __security_group.group_id }}"
+      subnets:
+        - "{{ __subnet1_info.subnet.id }}"
+        - "{{ __subnet2_info.subnet.id }}"
+      listeners:
+        - Protocol: "{{ elb.protocol }}"
+          Port: "{{ elb.port }}"
+          DefaultActions:
+            - Type: "{{ elb.type }}"
+              TargetGroupName: "{{ __target_group.target_group_name }}"
+    register: __elb

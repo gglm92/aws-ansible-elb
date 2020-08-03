@@ -72,3 +72,26 @@
         - dest: 0.0.0.0/0
           gateway_id: "{{ __igw_info.gateway_id }}"
     register: __route_table_info
+
+  - name: Create security group {{ security_group.name }} 
+    ec2_group:
+      name: "{{ security_group.name }}"
+      description: "{{ security_group.description }}"
+      region: "{{ region }}"
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      vpc_id: "{{ __vpc_info.vpc.id}}"
+      rules:
+        - proto: tcp
+          ports:
+            - 22
+          cidr_ip: 0.0.0.0/0
+          rule_desc: allow all on ssh port
+        - proto: tcp
+          ports:
+            - 80
+          cidr_ip: 0.0.0.0/0
+          rule_desc: allow all on http port
+      tags:
+        Name: "{{ security_group.name }}"
+    register: __security_group

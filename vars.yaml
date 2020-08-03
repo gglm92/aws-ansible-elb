@@ -1,6 +1,6 @@
 ---
-aws_access_key: xxxx
-aws_secret_key: xxxx
+aws_access_key: 
+aws_secret_key: 
 region: us-east-1
 vpc:
   name: example1
@@ -15,3 +15,7 @@ subnet2:
   cidr: 12.0.2.0/24
 route_table:
   name: rtb_exmaple1
+security_group:
+  name: sg_example1
+  description: Security Group to allow ssh and http
+  

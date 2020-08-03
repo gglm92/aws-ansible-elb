@@ -13,3 +13,5 @@ subnet1:
 subnet2:
   name: subnet-{{ region }}-1b
   cidr: 12.0.2.0/24
+route_table:
+  name: rtb_exmaple1

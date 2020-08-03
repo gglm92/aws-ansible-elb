@@ -49,3 +49,26 @@
       tags:
         Name: "{{ subnet2.name }}"
     register: __subnet2_info
+
+  - name: Get route table info of {{ __vpc_info.vpc.id }}
+    ec2_vpc_route_table_info:
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      region: "{{ region }}"
+      filters:
+        vpc-id: "{{ __vpc_info.vpc.id}}"
+    register: __route_table_info
+
+  - name: Set up public subnet route table "{{ __route_table_info.route_tables[0].id}}"
+    ec2_vpc_route_table:
+      route_table_id: "{{ __route_table_info.route_tables[0].id}}"
+      vpc_id: "{{ __vpc_info.vpc.id}}"
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      region: "{{ region }}"
+      tags:
+        Name: "{{ route_table.name }}"
+      routes:
+        - dest: 0.0.0.0/0
+          gateway_id: "{{ __igw_info.gateway_id }}"
+    register: __route_table_info

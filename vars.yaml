@@ -1,0 +1,15 @@
+---
+aws_access_key: xxxx
+aws_secret_key: xxxx
+region: us-east-1
+vpc:
+  name: example1
+  cidr_block: 12.0.0.0/16
+igw:
+  name: igw_example1
+subnet1:
+    name: subnet-{{ region }}-1a
+    cidr: 12.0.1.0/24
+subnet2:
+  name: subnet-{{ region }}-1b
+  cidr: 12.0.2.0/24

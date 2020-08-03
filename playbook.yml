@@ -1,0 +1,51 @@
+- name: Create environment to deploy an ELB and EC2 machines from scratch
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vars.yaml
+  
+  tasks:
+  - name: Create VPC in region {{ region }}
+    ec2_vpc_net:
+      name: "{{ vpc.name }}"
+      cidr_block: "{{ vpc.cidr_block }}"
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      region: "{{ region }}"
+      tenancy: default
+    register: __vpc_info
+  
+  - name: Create internet gateway
+    ec2_vpc_igw:
+      vpc_id: "{{ __vpc_info.vpc.id }}"
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      region: "{{ region }}"
+      tags:
+        Name: "{{ igw.name }}"
+      state: present
+    register: __igw_info
+
+  - name: Create subnet {{ subnet1.name }}
+    ec2_vpc_subnet:
+      state: present
+      vpc_id: "{{ __vpc_info.vpc.id }}"
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      region: "{{ region }}"
+      cidr: "{{ subnet1.cidr }}"
+      tags:
+        Name: "{{ subnet1.name }}"
+    register: __subnet1_info
+
+  - name: Create subnet {{ subnet2.name }}
+    ec2_vpc_subnet:
+      state: present
+      vpc_id: "{{ __vpc_info.vpc.id }}"
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      region: "{{ region }}"
+      cidr: "{{ subnet2.cidr }}"
+      tags:
+        Name: "{{ subnet2.name }}"
+    register: __subnet2_info

@@ -226,6 +226,9 @@
               TargetGroupName: "{{ __target_group.target_group_name }}"
     register: __elb
 
+  - name: Refresh inventory to ensure new instances exist in inventory
+    meta: refresh_inventory
+
 - name: Install service httpd on ec2 machines
   hosts: tag_type_ec2instance
   gather_facts: true

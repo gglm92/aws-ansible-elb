@@ -24,9 +24,6 @@
         "tag:Name": "{{ vpc.name }}"
     register: __vpc_info
 
-  - debug:
-      msg: "{{ __vpc_info }}"
-
   - name: Get route table info of {{ __vpc_info.vpcs[0].vpc_id }}
     ec2_vpc_route_table_info:
       aws_access_key: "{{ aws_access_key }}"
